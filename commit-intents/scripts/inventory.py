@@ -1,5 +1,6 @@
-"""Inventory of the commits in scope: every commit with a Claude-Session trailer on main of the given repos, and every
-merge commit that brings at least one of them in. Plan commits (only .vibe/ changed) get the commit they join.
+"""Inventory of the commits in scope: every commit whose message names its session (by default a Claude-Session
+trailer; set INTENTS_SESSION_PATTERN to a regex whose first group is the session id, e.g. for another agent system)
+on main of the given repos, and every merge commit that brings at least one of them in. Plan commits (only .vibe/ changed) get the commit they join.
 
   inventory.py <folder of bare clones> <repo>...   each repo is a bare clone <folder>/<repo>; writes data/commits.json"""
 import os, json, re, subprocess, sys
@@ -8,6 +9,8 @@ from pathlib import Path
 MIRROR = Path(sys.argv[1])
 OUT = Path(os.environ.get("INTENTS_WORKSPACE", ".")).resolve() / "data" / "commits.json"
 REPOS = sys.argv[2:]
+# the session id must equal the name of the session file: sessions/<id>.jsonl
+SESSION = os.environ.get("INTENTS_SESSION_PATTERN", r"Claude-Session:\s*\S*?(session_[A-Za-z0-9]+)")
 SEP = "\x1e"
 
 def git(repo, *args):
@@ -37,7 +40,7 @@ for repo in REPOS:
     all_commits = list(commits(repo))
     in_scope = set()
     for c in all_commits:
-        m = re.search(r"Claude-Session:\s*\S*?(session_[A-Za-z0-9]+)", c["message"])
+        m = re.search(SESSION, c["message"])
         c["session"] = m.group(1) if m else None
         if c["session"] and len(c["parents"]) < 2:
             in_scope.add(c["sha"])

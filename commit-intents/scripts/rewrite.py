@@ -3,7 +3,8 @@ touching any tree: every commit keeps its tree, author and committer lines (name
 messages and parents change.
 
 - A squash group becomes one commit: the tree of its last commit, the author line of its first, the committer line of
-  its last, the group's message plus the trailers of its commits (Co-Authored-By, Claude-Session, Signed-off-by).
+  its last, the group's message plus the trailers of its commits (Co-Authored-By, Claude-Session, Signed-off-by, and
+  the names in INTENTS_TRAILERS).
 - Another commit of the inventory keeps its place and gets its group's message.
 - A merge commit that brings in commits of the inventory keeps its first line and lists the new subjects it brings.
 - Every other commit (bots, people, commits after the inventory) keeps its message.
@@ -18,7 +19,9 @@ from pathlib import Path
 ROOT = Path(os.environ.get("INTENTS_WORKSPACE", ".")).resolve()  # the workspace: data/, sessions/, view/
 repo_dir, repo = sys.argv[1], sys.argv[2]
 new_ref = sys.argv[3] if len(sys.argv) > 3 else "refs/heads/main-rewritten"
-TRAILER = re.compile(r"^(Co-Authored-By|Co-authored-by|Claude-Session|Signed-off-by):.*$", re.M)
+# trailers a squashed commit keeps from its commits; INTENTS_TRAILERS adds more names, comma-separated
+TRAILER = re.compile(r"^(" + "|".join(["Co-Authored-By", "Co-authored-by", "Claude-Session", "Signed-off-by"] +
+                     [t for t in os.environ.get("INTENTS_TRAILERS", "").split(",") if t]) + r"):.*$", re.M)
 
 def git(*args, input=None):
     return subprocess.run(["git", "-C", repo_dir, *args], input=input, capture_output=True, text=True, check=True).stdout

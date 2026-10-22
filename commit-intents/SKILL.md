@@ -1,6 +1,6 @@
 ---
 name: commit-intents
-description: "Apply this when commits say what changed but not why, and the why is in the Claude Code sessions that made them: reconstruct each change's intent from those sessions, review it in a page, and rewrite the commit history with the new messages."
+description: "Apply this when commits say what changed but not why, and the why is in the agent sessions that made them (Claude Code or any other system whose sessions can be exported as messages): reconstruct each change's intent from those sessions, review it in a page, and rewrite the commit history with the new messages."
 ---
 
 Reconstruct commit intents from agent sessions and rewrite the history with them.
@@ -12,18 +12,22 @@ Reconstruct commit intents from agent sessions and rewrite the history with them
 
 **Workspace**
 - One folder holds `data/`, `sessions/` and `view/`. Run the scripts from there, or set `INTENTS_WORKSPACE`.
-- Scripts: `scripts/` of this skill. Rules and output format: `references/schema.md`. Agent brief:
-  `references/brief.md`.
+- Scripts: `scripts/` of this skill. Formats of every file: `references/formats.md`. Rules and the format of a
+  written intent: `references/schema.md`. Agent brief: `references/brief.md`.
+- **Any agent system:** the skill starts from one file per session (`sessions/<id>.jsonl`: time, role, text) and
+  the session id in each commit message (`INTENTS_SESSION_PATTERN`, default the `Claude-Session:` trailer). Produce
+  those, and every step from 4 on works unchanged (`references/formats.md`).
 - Never put session texts in a public repo; they hold the person's messages.
 
 **Steps**
 1. **Mirror:** a bare clone of each repo (`git clone --bare`) in one folder.
-2. **Inventory:** `inventory.py <mirrors> <repo>...` writes `data/commits.json`: every commit with a
-   `Claude-Session:` trailer, the merges that bring them in, and for each plan commit (only `.vibe/`) the commit it
+2. **Inventory:** `inventory.py <mirrors> <repo>...` writes `data/commits.json`: every commit that names its
+   session, the merges that bring them in, and for each plan commit (only `.vibe/`) the commit it
    joins.
-3. **Sessions:** serialize every session of the inventory with `serialize.py` (skill `claude-code-sessions`: page
-   `list_events`, let large pages land in files, never read them). `session_parents.py` finds sessions that another
-   session created: their "user" messages are prompts; the person's request is in the parent.
+3. **Sessions:** one file per session of the inventory, in the format of `references/formats.md`. For Claude Code:
+   `serialize.py` (skill `claude-code-sessions`: page `list_events`, let large pages land in files, never read
+   them) and `session_parents.py` for sessions that another session created (their "user" lines are prompts; the
+   person's request is in the parent). For another system: its own export into the same format.
 4. **Cut:** `intents.py` writes `data/intents.json`: per session, the person's messages since the last commit and
    the commits up to the next message. This is only the first proposal.
 5. **Probe:** let one agent write about 10 intents by `references/brief.md`; `context.py <id>` gives it the source.
