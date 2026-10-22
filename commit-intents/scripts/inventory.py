@@ -106,6 +106,7 @@ for repo in REPOS:
         if c["sha"] in pr_of:
             c["prMerge"] = pr_of[c["sha"]]["sha"]
 
+OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(json.dumps(result, ensure_ascii=False, indent=1))
 by = {}
 for c in result:

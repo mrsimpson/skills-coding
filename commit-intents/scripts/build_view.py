@@ -1,5 +1,7 @@
 """Builds view/index.html: the written intents (data/written/*.json) with their sessions, times, repos and source
-commits, injected as JSON into view/template.html."""
+commits, injected as JSON into template.html next to this script.
+
+  build_view.py [<intent id>...]   only these intents"""
 import os, json, sys
 from pathlib import Path
 
@@ -35,8 +37,7 @@ for f in sorted((ROOT / "data" / "written").glob("i*.json")):
                 "decisions": w.get("keyDecisions", []), "trigger": w.get("trigger", ""), "kind": w.get("kind", ""),
                 "confidence": w.get("confidence", ""), "relations": w.get("relations", []), "groups": groups,
                 "messages": len(i["messages"]), "sourceCount": len(i["commits"]),
-                "misplaced": [{"sha": m["commit"][:7], "belongsTo": m.get("belongsTo", ""), "why": m.get("why", "")}
-                              for m in w.get("misplaced", [])]})
+                })
 html = (Path(__file__).resolve().parent / "template.html").read_text().replace("/*DATA*/[]", json.dumps(out, ensure_ascii=False))
 (ROOT / "view").mkdir(exist_ok=True)
 (ROOT / "view" / "index.html").write_text(html)

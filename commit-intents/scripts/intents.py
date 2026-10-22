@@ -16,7 +16,7 @@ def anchor(c):
     return c
 
 intents = []
-for path in sorted((ROOT / "sessions").glob("session_*.jsonl")):
+for path in sorted((ROOT / "sessions").glob("*.jsonl")):
     session = path.stem
     messages = [r for r in map(json.loads, open(path)) if r["role"] == "user"]
     own = sorted((c for c in commits if c["kind"] == "commit" and c["session"] == session),

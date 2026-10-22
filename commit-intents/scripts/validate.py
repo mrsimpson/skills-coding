@@ -3,7 +3,7 @@ exactly one squash group across all files, and every group squashable: one repo,
 on the one before (first parent), with nothing between. Exit 1 on any finding.
 
   validate.py [<intent id>...]   only these files; their commits are checked against each other"""
-import os, json, sys
+import os, json, re, sys
 from pathlib import Path
 
 ROOT = Path(os.environ.get("INTENTS_WORKSPACE", ".")).resolve()  # the workspace: data/, sessions/, view/
@@ -20,6 +20,10 @@ for f in sorted((ROOT / "data" / "written").glob("i*.json")):
     if only and w.get("id") not in only:
         continue
     findings += [f"{f.name}: field {k} missing" for k in FIELDS if k not in w]
+    own = {s for gs in w.get("squash", {}).values() for g in gs for s in g["commits"]}
+    for m in w.get("moved", []):
+        if m.get("commit") not in own or m.get("kind") not in ("moved", "split", "dropped", "plan-rule"):
+            findings.append(f"{f.name}: moved entry {str(m.get('commit'))[:7]} is not in this intent or has no valid kind")
     for repo, groups in w.get("squash", {}).items():
         for g in groups:
             if not g.get("message", "").strip():
@@ -31,6 +35,8 @@ for f in sorted((ROOT / "data" / "written").glob("i*.json")):
                 if s in seen:
                     findings.append(f"{s[:7]} is in {seen[s]} and in {f.name}")
                 seen[s] = f.name
+            if re.search(r"\bi\d{3}b?\b", g.get("message", "")):
+                findings.append(f"{f.name}: a message in {repo} names an intent id; the history does not know it")
             for before, after in zip(run, run[1:]):
                 if commits[after]["parents"][:1] != [before]:
                     findings.append(f"{f.name}: {after[:7]} does not follow {before[:7]} directly "
