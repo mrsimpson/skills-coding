@@ -9,8 +9,8 @@ messages and parents change.
 - A merge commit that brings in commits of the inventory keeps its first line and lists the new subjects it brings.
 - Every other commit (bots, people, commits after the inventory) keeps its message.
 - Abbreviated or full SHAs of rewritten commits in messages are replaced by the new ones.
-- Signatures are dropped; nothing is reordered. A signed commit therefore gets a new SHA even when its message stays,
-  and so does every commit after it: expect every SHA of main to change.
+- Signatures are dropped; nothing is reordered. The first commit that changes (a new message, or a dropped
+  signature) gets a new SHA, and so does every commit after it; commits before it keep theirs.
 - SHAs in messages are remapped only where they name an earlier commit of the same repo; a message cannot name its own
   new SHA, a later commit's or another repo's. Write repo and pull request number instead (references/schema.md).
 

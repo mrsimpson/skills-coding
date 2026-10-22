@@ -2,13 +2,17 @@
 trailer; set INTENTS_SESSION_PATTERN to a regex whose first group is the session id, e.g. for another agent system)
 on main of the given repos, and every merge commit that brings at least one of them in. Plan commits (only .vibe/ changed) get the commit they join.
 
-  inventory.py <folder of bare clones> <repo>...   each repo is a bare clone <folder>/<repo>; writes data/commits.json"""
+  inventory.py <folder of bare clones> <repo>... [--exclude <sha>...]
+      each repo is a bare clone <folder>/<repo>; writes data/commits.json. --exclude leaves commits out, e.g. the
+      data export of an earlier run (match by SHA prefix)."""
 import os, json, re, subprocess, sys
 from pathlib import Path
 
 MIRROR = Path(sys.argv[1])
 OUT = Path(os.environ.get("INTENTS_WORKSPACE", ".")).resolve() / "data" / "commits.json"
-REPOS = sys.argv[2:]
+ARGS = sys.argv[2:]
+REPOS = ARGS[:ARGS.index("--exclude")] if "--exclude" in ARGS else ARGS
+EXCLUDE = ARGS[ARGS.index("--exclude") + 1:] if "--exclude" in ARGS else []
 # the session id must equal the name of the session file: sessions/<id>.jsonl
 SESSION = os.environ.get("INTENTS_SESSION_PATTERN", r"Claude-Session:\s*\S*?(session_[A-Za-z0-9]+)")
 SEP = "\x1e"
@@ -42,7 +46,7 @@ for repo in REPOS:
     for c in all_commits:
         m = re.search(SESSION, c["message"])
         c["session"] = m.group(1) if m else None
-        if c["session"] and len(c["parents"]) < 2:
+        if c["session"] and len(c["parents"]) < 2 and not any(c["sha"].startswith(x) for x in EXCLUDE):
             in_scope.add(c["sha"])
     for c in all_commits:
         c["repo"] = repo
@@ -66,6 +70,11 @@ for repo in REPOS:
         if c["touchesPlan"]:
             c["planDiff"] = git(repo, "show", "--format=", c["sha"], "--", ".vibe/")
         result.append(c)
+    # a commit's pull request is the one whose merge brings it in
+    for m in [c for c in result if c["repo"] == repo and c["kind"] == "merge"]:
+        for c in result:
+            if c["repo"] == repo and c["kind"] == "commit" and c["sha"] in m["brings"] and not c.get("pr"):
+                c["pr"], c["prMerge"] = m["pr"], m["sha"]
 
 # A commit of only the plan file joins another commit, by these rules in this order:
 #   parent      its parent is a commit of the same session (same branch): it joins the parent, as the plan written

@@ -14,6 +14,12 @@ before = [i for i in same if i["end"] < intent["start"]]
 since = max((i["end"] for i in before), default="")
 norm = lambda t: t.replace("Z", "+00:00")[:19]
 print(f"# Intent {intent['id']} in {intent['session']}, {intent['start']} .. {intent['end']}\n")
+earlier = [r for r in map(json.loads, open(ROOT / "sessions" / f"{intent['session']}.jsonl"))
+           if r["role"] == "user" and norm(r["time"]) <= norm(since)][-5:]
+if earlier:
+    print("## The person's last messages before that (the request may be here, when work ran on)\n")
+    for r in earlier:
+        print(f"[{r['time'][:16]}] USER (earlier): {r['text'][:1500]}\n")
 print("## Session entries since the previous intent's last commit\n")
 for line in open(ROOT / "sessions" / f"{intent['session']}.jsonl"):
     r = json.loads(line)

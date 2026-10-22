@@ -7,7 +7,12 @@ The skill works for sessions of any agent system. Its interface is two things:
    `claude-code-sessions` produce it.
 2. **The session id in each commit message**, so that the inventory can link commits to sessions. By default a
    trailer `Claude-Session: …session_<id>`. For another system, set `INTENTS_SESSION_PATTERN` to a regex whose first
-   group is the session id, e.g. `Agent-Session:\s*(\S+)`. The id must equal the name of the session file.
+   group is the session id, e.g. `Agent-Session:\s*(\S+)`. The id is exactly what that group captures, prefix
+   included (Claude Code: `session_01Abc…`), and the file is `sessions/<that id>.jsonl`.
+
+Check a delivered file before using it: `scripts/check_sessions.py <folder>`. It reports what does not fit and
+converts nothing; with `data/commits.json` present it also reports a file that ends before its session's last
+commit.
 
 Everything after these two (cut, writing, review, rewrite) is the same for every agent system. All files are UTF-8;
 times are ISO 8601 with a time zone (`2026-10-13T15:33:02Z`).
