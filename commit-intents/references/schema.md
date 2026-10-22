@@ -45,7 +45,8 @@ Rules:
   and the committer date of its last. Nothing is ever reordered.
 - A plan commit joins the commit `joinsWith` names only under the same rule; otherwise it stays its own commit in the
   same intent. Every commit of the intent appears exactly once in `squash`.
-- In each new message, "Dependencies and side effects" names the commits of the same intent in the other repos.
+- In each new message, "Dependencies and side effects" names the other repos of the same intent by repo and pull
+  request ("lernapps/docs#46"), or by repo alone when there is no pull request; never by SHA.
 - `confidence` is "inferred" when the conversation does not state the why and you derived it from the diff.
 - Assign by content, not by time: an intent holds the commits that serve its request, even when they came after the
   person's next message (subagents still running, a usage limit, a fix after the merge). The time cut in
@@ -56,7 +57,7 @@ Rules:
 - Record every commit that is not where the time cut in data/intents.json put it in
   `"moved": [{"commit": "<full sha>", "from": "<intent id of the time cut>", "kind": "moved | split | dropped |
   plan-rule", "why": "…"}]`: moved = it serves this intent's request; split = this file is the second request of
-  a split intent; dropped = the intent of the time cut has no commits left; plan-rule = a plan commit that does not
+  a split intent; dropped = it comes from an intent of the time cut that has no commit left, so no file is written for that one; plan-rule = a plan commit that does not
   join its `joinsWith` commit (name where that one is).
 - A session created by another session (data/session-parents.json): its USER entries are prompts, not the person.
   Take `trigger` and `intent` from the person's messages in the parent session, which context.py prints.

@@ -130,7 +130,13 @@ git("update-ref", new_ref, new[order[-1]])
 json.dump(new, open(ROOT / "data" / f"map-{repo}.json", "w"), indent=0)
 old_tree, new_tree = git("rev-parse", "main^{tree}").strip(), git("rev-parse", f"{new_ref}^{{tree}}").strip()
 kept = [s for s in order if group_of.get(s) is None or s == last_of[group_of[s]]]
-same = all(git("rev-parse", f"{s}^{{tree}}").strip() == git("rev-parse", f"{new[s]}^{{tree}}").strip() for s in kept[-50:])
+same = all(git("rev-parse", f"{s}^{{tree}}").strip() == git("rev-parse", f"{new[s]}^{{tree}}").strip() for s in kept)
+# commits of main that name a session but are not in the inventory: main moved on after it, or they were excluded
+SESSION = os.environ.get("INTENTS_SESSION_PATTERN", r"Claude-Session:\s*\S*?(session_[A-Za-z0-9]+)")
+unknown = [s for s in order if len(raw(s)[1]) < 2 and s not in inventory and re.search(SESSION, raw(s)[4])]
+if unknown:
+    print(f"{repo}: note: {len(unknown)} commit(s) name a session but are not in the inventory and keep their message "
+          f"(excluded, or main moved on after the inventory): {', '.join(s[:7] for s in unknown[:10])}")
 print(f"{repo}: {len(order)} -> {len(set(new.values()))} commits; final tree {'identical' if old_tree == new_tree else 'DIFFERS'};"
-      f" last 50 trees {'identical' if same else 'DIFFER'}")
+      f" every kept commit's tree {'identical' if same else 'DIFFERS'}")
 sys.exit(0 if old_tree == new_tree and same else 1)

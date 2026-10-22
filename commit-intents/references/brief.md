@@ -7,7 +7,7 @@ Read first, fully: references/schema.md of the skill commit-intents (the rules a
 commit skill (the message format). The scripts are in the skill's scripts/ folder (written <scripts> below); run
 them from the workspace, or set INTENTS_WORKSPACE.
 
-For each intent of your slice, in time order (sort by `start`; the ids are numbered per session, not by time):
+For each intent of your slice, in time order (sort by `start`; an id is the session and a number within it, not a time):
 1. `python3 -I <scripts>/context.py <id>` prints the session entries since the session's previous intent, the intent's
    commits (message, files, plan-commit rule), and for a session created by another session the person's messages
    there and the prompt. That is your source. For more, grep neighbouring lines of sessions/<session>.jsonl by time,

@@ -42,8 +42,12 @@ for path in sorted((ROOT / "sessions").glob("*.jsonl")):
             i["start"] = i["messages"][0]["time"] if i["messages"] else min(c["authorDate"] for c in cs)
             i["end"] = max(c["authorDate"] for c in cs)
 
-for n, i in enumerate(intents, 1):
-    i["id"] = f"i{n:03}"
+# stable ids: the session's last 8 characters and the intent's number within the session, so that adding a session
+# file later does not shift the ids of files already written
+count = {}
+for i in intents:
+    count[i["session"]] = count.get(i["session"], 0) + 1
+    i["id"] = f"{i['session'][-8:]}-{count[i['session']]:03}"
 json.dump(intents, open(ROOT / "data" / "intents.json", "w"), ensure_ascii=False, indent=1)
 
 import collections

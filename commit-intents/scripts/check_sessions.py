@@ -28,7 +28,24 @@ problems, found = [], {}
 for f in files:
     if f.suffix != ".jsonl":
         problems.append(f"{f.name}: the name must be <session id>.jsonl")
-        continue
+    text = f.read_text(encoding="utf-8")
+    if text.lstrip().startswith(("{", "[")) and text.count("\n") <= 1 and len(text) > 200:
+        try:
+            doc = json.loads(text)
+            keys = sorted(doc) if isinstance(doc, dict) else "a list"
+            problems.append(f"{f.name}: one JSON document ({keys}), not one object per line")
+            items = next((v for v in (doc.values() if isinstance(doc, dict) else [doc]) if isinstance(v, list)), [])
+            if items and isinstance(items[0], dict):
+                k = sorted(items[0])
+                if set(k) != {"time", "role", "text"}:
+                    problems.append(f"{f.name}: entries have the keys {k}, not time, role, text")
+                for key in k:
+                    values = {str(x.get(key)) for x in items if isinstance(x, dict)}
+                    if len(values) <= 6 and not values & {"user", "assistant", "action"} and len(values) > 1:
+                        problems.append(f"{f.name}: {key} has the values {sorted(values)}, not user, assistant, action")
+            continue
+        except ValueError:
+            pass
     last, users, n = None, 0, 0
     for i, line in enumerate(open(f, encoding="utf-8"), 1):
         if not line.strip():

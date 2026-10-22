@@ -3,7 +3,7 @@ exactly one squash group across all files, and every group squashable: one repo,
 on the one before (first parent), with nothing between. Exit 1 on any finding.
 
   validate.py [<intent id>...]   only these files; their commits are checked against each other
-  validate.py --repo <name>      all files; but only the commits of this repo must each be in an intent"""
+  validate.py --repo <name>      all files; only this repo's commits must each be in an intent and have a message"""
 import os, json, re, sys
 from pathlib import Path
 
@@ -30,7 +30,7 @@ for f in sorted((ROOT / "data" / "written").glob("i*.json")):
             findings.append(f"{f.name}: moved entry {str(m.get('commit'))[:7]} is not in this intent or has no valid kind")
     for repo, groups in w.get("squash", {}).items():
         for g in groups:
-            if not g.get("message", "").strip():
+            if not g.get("message", "").strip() and (not repo_only or repo == repo_only):
                 findings.append(f"{f.name}: a group in {repo} has no message")
             run = sorted(g["commits"], key=order.__getitem__)
             for s in run:
@@ -39,7 +39,7 @@ for f in sorted((ROOT / "data" / "written").glob("i*.json")):
                 if s in seen:
                     findings.append(f"{s[:7]} is in {seen[s]} and in {f.name}")
                 seen[s] = f.name
-            if re.search(r"\bi\d{3}b?\b", g.get("message", "")):
+            if re.search(r"\bi\d{3}b?\b|\b[A-Za-z0-9]{8}-\d{3}b?\b", g.get("message", "")):
                 findings.append(f"{f.name}: a message in {repo} names an intent id; the history does not know it")
             for before, after in zip(run, run[1:]):
                 if commits[after]["parents"][:1] != [before]:

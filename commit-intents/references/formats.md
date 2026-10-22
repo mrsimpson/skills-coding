@@ -48,7 +48,7 @@ For sessions that another session created; their `user` lines are prompts, not t
 | File | Written by | Content |
 |---|---|---|
 | `data/commits.json` | `inventory.py` | A list of commits in scope: `repo`, `sha`, `parents`, `author`, `authorEmail`, `authorDate`, `committer`, `committerDate`, `message`, `subject`, `session`, `pr`, `kind` (`commit` or `merge`), `files` (`path`, `added`, `removed`), `planOnly`, `touchesPlan`, `planDiff`; for a merge `brings` (the shas it brings in); for a plan commit `joinsWith`, `joinRule`, `prMerge`. |
-| `data/intents.json` | `intents.py` | The first cut: a list of `id`, `session`, `messages` (the `user` lines), `commits` (shas), `repos`, `start`, `end`. |
+| `data/intents.json` | `intents.py` | The first cut: a list of `id`, `session`, `messages` (the `user` lines), `commits` (shas), `repos`, `start`, `end`. An id is the session id's last 8 characters and a number within the session (`MHJp-012`); a split adds `b`. Ids stay the same when session files are added. |
 | `data/written/<id>.json` | the agents (`references/brief.md`) | One written intent; the format is `references/schema.md`. |
 | `data/slices.json` | by hand or a short script | A list of lists of intent ids, one list per agent. |
 | `data/map-<repo>.json` | `rewrite.py` | Old sha → new sha for every commit of `main`. |
