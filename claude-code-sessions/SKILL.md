@@ -1,9 +1,9 @@
 ---
-name: session-transcripts
-description: "Apply this when you need what was said in earlier Claude Code sessions: the person's messages, the replies, the commits and pull requests made there. How to turn transcripts into small text files at low cost."
+name: claude-code-sessions
+description: "Apply this only to Claude Code sessions (local or in the cloud), when you need what was said in earlier ones: the person's messages, the replies, the commits and pull requests made there. How to turn their transcripts into small text files at low cost."
 ---
 
-Read session transcripts cheaply:
+Read Claude Code session transcripts cheaply. Only for Claude Code: other tools write other formats.
 
 - **Goal:** one file per session, `sessions/<session_id>.jsonl`, one line per entry, sorted by time:
   `{"time": "…", "role": "user" | "assistant" | "action", "text": "…"}`.
