@@ -1,0 +1,220 @@
+<title>Commit-Intents</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a timeline with one lane per repo on top, then one card per intent in time order; the commit line leads each card. */
+:root {
+  --bg: #f6f7f5; --surface: #ffffff; --fg: #1d2421; --muted: #5d6863; --line: #d9dfdb; --accent: #1f6f5c;
+  --warn: #9a5b00; --warn-bg: #fff3dc;
+  --r0: #1f6f5c; --r1: #8a4fbf; --r2: #c2571a; --r3: #2f6bb3; --r4: #9b7d12; --r5: #6b7280;
+  --sans: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #131816; --surface: #1b211e; --fg: #e4ebe7; --muted: #9aa7a1; --line: #2e3733; --accent: #5cc3a6;
+  --warn: #f0b456; --warn-bg: #3a2c12;
+  --r0: #5cc3a6; --r1: #b98ae6; --r2: #f08a4b; --r3: #6fa3e8; --r4: #d8b440; --r5: #a3aab5;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #131816; --surface: #1b211e; --fg: #e4ebe7; --muted: #9aa7a1; --line: #2e3733; --accent: #5cc3a6;
+  --warn: #f0b456; --warn-bg: #3a2c12;
+  --r0: #5cc3a6; --r1: #b98ae6; --r2: #f08a4b; --r3: #6fa3e8; --r4: #d8b440; --r5: #a3aab5;
+  color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px }
+main { max-width: 980px; margin: 0 auto; display: grid; gap: 28px }
+h1 { font-size: 1.9rem; line-height: 1.2; margin: 0; text-wrap: balance }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 65ch }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 14px; font-variant-numeric: tabular-nums }
+.stats b { font-size: 1.25rem; display: block }
+.stats span { color: var(--muted); font-size: .85rem }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px }
+.panel h2 { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px }
+.timeline-wrap { overflow-x: auto }
+svg text { fill: var(--muted); font: 12px var(--sans) }
+svg .lane { stroke: var(--line) }
+svg .mark { cursor: pointer }
+svg .mark:hover line, svg .mark.sel line { stroke-width: 3 }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.chip { font: 600 .78rem var(--mono); border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  border-radius: 999px; padding: 3px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px }
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block }
+.chip[aria-pressed="false"] { opacity: .45 }
+.chip:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+input[type=search] { font: inherit; padding: 5px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); min-width: 0; flex: 1 1 200px }
+label.toggle { font-size: .9rem; color: var(--muted); display: inline-flex; gap: 6px; align-items: center }
+#cards { display: grid; gap: 16px }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; min-width: 0 }
+.card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums }
+.meta .id { font-family: var(--mono) }
+.repo { font: 600 .75rem var(--mono); padding: 1px 8px; border-radius: 999px; color: var(--surface); background: var(--c) }
+.pill { font-size: .75rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line) }
+.pill.warn { color: var(--warn); background: var(--warn-bg); border-color: transparent }
+.commit { font: 600 1.02rem/1.4 var(--mono); margin: 0; overflow-wrap: anywhere }
+.intent { margin: 0; max-width: 72ch }
+.decisions { margin: 0; padding-left: 1.2em; color: var(--fg); max-width: 72ch }
+.decisions li { margin: 2px 0 }
+.label { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 4px 0 2px }
+.groups { display: grid; gap: 8px }
+.group { border-left: 3px solid var(--c); padding: 4px 0 4px 12px; min-width: 0 }
+.group .new { font: .85rem var(--mono); overflow-wrap: anywhere }
+.src { list-style: none; margin: 4px 0 0; padding: 0; font: .82rem var(--mono); color: var(--muted) }
+.src li { overflow-wrap: anywhere }
+.src .sha { color: var(--fg) }
+.src .plan { font-family: var(--sans); font-size: .72rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px }
+details summary { cursor: pointer; color: var(--accent); font-size: .9rem }
+details pre { white-space: pre-wrap; overflow-wrap: anywhere; font: .82rem/1.5 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin: 8px 0 0 }
+.note { font-size: .9rem; color: var(--muted); max-width: 72ch }
+.warnbox { background: var(--warn-bg); color: var(--fg); border-radius: 6px; padding: 8px 10px; font-size: .9rem }
+.warnbox b { color: var(--warn) }
+.moves { margin: 6px 0 0; padding-left: 1.1em; font-size: .85rem }
+.moves .sha, .move { font-family: var(--mono) }
+.move { font-size: .72rem; color: var(--warn); background: var(--warn-bg); border-radius: 4px; padding: 0 5px; margin-left: 4px }
+blockquote { margin: 0; padding-left: 10px; border-left: 2px solid var(--line); color: var(--muted); font-style: italic; max-width: 72ch }
+.empty { color: var(--muted); text-align: center; padding: 24px }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .2s } }
+</style>
+
+<main>
+  <header>
+    <h1>Commit-Intents</h1>
+    <p class="lede">Warum jede Änderung entstand, rekonstruiert aus den Claude-Sessions. Jede Karte ist ein Intent: deine Nachrichten bis zu den Commits danach, in allen Repos. Oben steht der vorgeschlagene Conventional Commit, unten die alten Commits, die er ersetzt.</p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section class="panel" aria-labelledby="tl-h">
+    <h2 id="tl-h">Zeitachse</h2>
+    <div class="timeline-wrap"><svg id="timeline" role="img" aria-label="Intents über die Zeit, eine Spur pro Repo"></svg></div>
+  </section>
+
+  <section class="controls" aria-label="Filter">
+    <span id="repoChips" class="controls"></span>
+    <input type="search" id="q" placeholder="Suche in Commit, Intent, Entscheidungen, SHA">
+    <label class="toggle"><input type="checkbox" id="onlyFlag"> nur zu prüfen</label>
+  </section>
+
+  <section id="cards" aria-live="polite"></section>
+</main>
+
+<script>
+const DATA = /*DATA*/[];
+// the repos in the order of their first intent; colors repeat after six
+const REPOS = [...new Set(DATA.slice().sort((a, b) => new Date(a.from) - new Date(b.from)).flatMap(d => d.repos))];
+const color = r => `var(--r${Math.max(0, REPOS.indexOf(r)) % 6})`;
+const KIND = { feature: "Feature", fix: "Fix", rework: "Umbau", eval: "Eval", docs: "Doku", chore: "Pflege" };
+const fmt = new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+const hm = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+const day = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const movedOf = d => d.groups.flatMap(g => g.sources.flatMap(s => s.moved.map(m => ({ ...m, sha: s.sha }))));
+const flagged = d => d.confidence === "inferred" || movedOf(d).length > 0;
+const MOVE = { moved: "verschoben aus", split: "abgetrennt von", dropped: "übernommen aus", "plan-rule": "Plan-Regel: gehört zu" };
+const state = { repos: new Set(REPOS), q: "", onlyFlag: false, sel: null };
+
+function span(d) {
+  const a = new Date(d.from), b = new Date(d.to), min = Math.round((b - a) / 60000);
+  const sameDay = day.format(a) === day.format(b);
+  const len = min < 60 ? `${min} min` : min < 1440 ? `${Math.round(min / 6) / 10} h` : `${Math.round(min / 144) / 10} Tage`;
+  return `${fmt.format(a)} – ${sameDay ? hm.format(b) : fmt.format(b)} · ${len}`;
+}
+
+function stats() {
+  const src = DATA.reduce((n, d) => n + d.sourceCount, 0), now = DATA.reduce((n, d) => n + d.groups.length, 0);
+  const repos = new Set(DATA.flatMap(d => d.repos)), multi = DATA.filter(d => d.repos.length > 1).length;
+  const t = DATA.map(d => +new Date(d.from)).concat(DATA.map(d => +new Date(d.to)));
+  const items = [[DATA.length, "Intents"], [`${src} → ${now}`, "alte → neue Commits"], [repos.size, "Repos"], [multi, "über mehrere Repos"],
+    [DATA.filter(flagged).length, "zu prüfen"], [t.length ? `${day.format(Math.min(...t))}–${day.format(Math.max(...t))}` : "–", "Zeitraum"]];
+  document.getElementById("stats").innerHTML = items.map(([b, s]) => `<div><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join("");
+}
+
+function timeline() {
+  const svg = document.getElementById("timeline");
+  const t0 = Math.min(...DATA.map(d => +new Date(d.from))), t1 = Math.max(...DATA.map(d => +new Date(d.to)));
+  const left = 140, width = Math.max(720, svg.parentElement.clientWidth), right = 16, lane = 26, top = 22;
+  const h = top + REPOS.length * lane + 8;
+  svg.setAttribute("viewBox", `0 0 ${width} ${h}`); svg.setAttribute("width", width); svg.setAttribute("height", h);
+  const x = t => left + (width - left - right) * ((t - t0) / Math.max(1, t1 - t0));
+  const y = r => top + REPOS.indexOf(r) * lane + lane / 2;
+  let out = REPOS.map(r => `<line class="lane" x1="${left}" x2="${width - right}" y1="${y(r)}" y2="${y(r)}"/><text x="0" y="${y(r) + 4}">${esc(r)}</text>`).join("");
+  const days = []; for (let t = new Date(t0); t <= t1; t = new Date(+t + 864e5)) days.push(t);
+  out += days.map(t => `<text x="${x(+t)}" y="12" text-anchor="middle">${esc(day.format(t))}</text>`).join("");
+  out += DATA.map(d => {
+    const xe = x(+new Date(d.to)), ys = d.repos.map(y), c = flagged(d) ? "var(--warn)" : "var(--accent)";
+    const bar = d.repos.map(r => `<line x1="${x(+new Date(d.from))}" x2="${xe}" y1="${y(r)}" y2="${y(r)}" stroke="${color(r)}" stroke-opacity=".35" stroke-width="6"/>`).join("");
+    const conn = ys.length > 1 ? `<line x1="${xe}" x2="${xe}" y1="${Math.min(...ys)}" y2="${Math.max(...ys)}" stroke="${c}" stroke-width="1.5"/>` : "";
+    const dots = d.repos.map(r => `<circle cx="${xe}" cy="${y(r)}" r="4" fill="${color(r)}"/>`).join("");
+    return `<g class="mark${state.sel === d.id ? " sel" : ""}" data-id="${d.id}" tabindex="0"><title>${esc(d.commit)}</title>${bar}${conn}${dots}</g>`;
+  }).join("");
+  svg.innerHTML = out;
+  svg.querySelectorAll(".mark").forEach(g => {
+    const go = () => select(g.dataset.id, true);
+    g.addEventListener("click", go); g.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  });
+}
+
+function chips() {
+  const el = document.getElementById("repoChips");
+  el.innerHTML = REPOS.map(r => `<button class="chip" id="chip-${r.replace(/\W/g, "")}" aria-pressed="${state.repos.has(r)}" data-r="${r}"><i style="background:${color(r)}"></i>${esc(r)}</button>`).join("");
+  el.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const r = b.dataset.r; state.repos.has(r) ? state.repos.delete(r) : state.repos.add(r); chips(); cards();
+  }));
+}
+
+function card(d) {
+  const groups = d.groups.map(g => `
+    <div class="group" style="--c:${color(g.repo)}">
+      <div class="new"><span class="repo" style="--c:${color(g.repo)}">${esc(g.repo)}</span> ${esc((g.message || "").split("\n")[0])}</div>
+      <ul class="src">${g.sources.map(s => `<li><span class="sha">${esc(s.sha)}</span> ${esc(s.subject)}${s.plan ? '<span class="plan">Plan</span>' : ""}${s.pr ? ` · #${s.pr}` : ""}${s.moved.map(m => ` <span class="move" title="${esc(m.why)}">${esc(MOVE[m.kind] || m.kind)} ${esc(m.from)}</span>`).join("")}</li>`).join("")}</ul>
+    </div>`).join("");
+  const mv = movedOf(d);
+  const misplaced = mv.length ? `<div class="warnbox"><b>Zuordnung prüfen:</b> ${mv.length} Fall/Fälle, anders als der Zeitschnitt<ul class="moves">${mv.map(m => `<li><span class="sha">${esc(m.sha)}</span> ${esc(MOVE[m.kind] || m.kind)} ${esc(m.from)}: ${esc(m.why)}</li>`).join("")}</ul></div>` : "";
+  const rel = (d.relations || []).map(r => `${r.type === "revises" ? "überarbeitet" : "setzt fort"} ${esc(r.intent)}${r.note ? ": " + esc(r.note) : ""}`).join("; ");
+  const messages = d.groups.map(g => `<pre>${esc(g.repo)}\n\n${esc(g.message)}${g.reason ? `\n\n— Zusammenlegung: ${esc(g.reason)}` : ""}</pre>`).join("");
+  return `<article class="card${state.sel === d.id ? " sel" : ""}" id="${d.id}">
+    <div class="meta"><span class="id">${esc(d.id)}</span><span>${esc(span(d))}</span>
+      ${d.repos.map(r => `<span class="repo" style="--c:${color(r)}">${esc(r)}</span>`).join("")}
+      ${d.kind ? `<span class="pill">${esc(KIND[d.kind] || d.kind)}</span>` : ""}
+      ${d.confidence === "inferred" ? '<span class="pill warn">erschlossen</span>' : ""}
+      ${movedOf(d).length ? '<span class="pill warn">Zuordnung prüfen</span>' : ""}</div>
+    <p class="commit">${esc(d.commit)}</p>
+    <p class="intent">${esc(d.intent)}</p>
+    ${d.decisions.length ? `<div><div class="label">Key Decisions</div><ul class="decisions">${d.decisions.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    ${misplaced}
+    <div><div class="label">Quell-Commits → neue Commits (${d.sourceCount} → ${d.groups.length})</div><div class="groups">${groups}</div></div>
+    <details><summary>Auslöser, Bezüge und vorgeschlagene Nachrichten</summary>
+      ${d.trigger ? `<div class="label">Auslöser</div><blockquote>${esc(d.trigger)}</blockquote>` : ""}
+      ${rel ? `<div class="label">Bezüge</div><p class="note">${rel}</p>` : ""}
+      <div class="label">Neue Commit-Nachrichten</div>${messages}
+      <p class="note">Session ${esc(d.session)} · ${d.messages} Nachricht(en) von dir</p>
+    </details>
+  </article>`;
+}
+
+function visible() {
+  const q = state.q.toLowerCase();
+  return DATA.filter(d => d.repos.some(r => state.repos.has(r)))
+    .filter(d => !state.onlyFlag || flagged(d))
+    .filter(d => !q || JSON.stringify([d.commit, d.intent, d.decisions, d.groups.map(g => [g.message, g.sources])]).toLowerCase().includes(q));
+}
+
+function cards() {
+  const list = visible();
+  document.getElementById("cards").innerHTML = list.length ? list.map(card).join("") : '<p class="empty">Kein Intent passt zu diesem Filter.</p>';
+}
+
+function select(id, scroll) {
+  state.sel = id; timeline(); cards();
+  const el = document.getElementById(id);
+  if (el && scroll) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+}
+
+DATA.sort((a, b) => new Date(a.from) - new Date(b.from));
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value; cards(); });
+document.getElementById("onlyFlag").addEventListener("change", e => { state.onlyFlag = e.target.checked; cards(); });
+addEventListener("resize", () => timeline());
+stats(); chips(); timeline(); cards();
+if (location.hash && DATA.some(d => "#" + d.id === location.hash)) select(location.hash.slice(1), true);
+</script>

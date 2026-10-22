@@ -17,7 +17,9 @@ Read Claude Code session transcripts cheaply. Only for Claude Code: other tools 
   - entries marked `isMeta`, `isSynthetic` or `isCompactSummary`;
   - text the harness writes: `<system-reminder>`, `<task-notification>`, "This session is being continued…",
     "[Request interrupted…", stop hook feedback.
-- **The current session** is on disk: `~/.claude/projects/<project>/<id>.jsonl`. Convert it with a script.
+- **The script:** `commit-intents/scripts/serialize.py` converts both (`local` for a transcript on disk, `remote`
+  for saved pages).
+- **The current session** is on disk: `~/.claude/projects/<project>/<id>.jsonl`.
 - **Other cloud sessions:** use `list_events` of the `claude-code-remote` MCP server.
   - Call it with `limit: 100` and **no** `kinds` filter. The filter runs after a page is read, so it saves nothing.
   - Without a cursor you get the newest page. Go back with `before_id` = the page's `first_id` until `has_more` is
