@@ -3,184 +3,126 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'none'; form-action 'none'; connect-src 'self'">
 <title>Slides Viewer</title>
+<link rel="stylesheet" href="vendor/reveal/reveal.css">
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    background: var(--c-stage); color: var(--c-text);
-    font: var(--s-ui) / 1.4 var(--f-ui);
-    display: grid; grid-template-rows: 1fr var(--s-bar-height); overflow: hidden;
+  /* Chrome-Farben kommen aus tokens.json; reveal.js liest sie über seine --r-* Variablen. */
+  :root {
+    --r-background-color: var(--c-stage);
+    --r-main-color: var(--c-text);
+    --r-link-color: var(--c-accent);
+    --r-link-color-hover: var(--c-accent);
+    --r-overlay-element-bg-color: 0, 0, 0;
+    --r-overlay-element-fg-color: 240, 240, 240;
   }
-  #stage { position: relative; overflow: hidden; min-height: 0; }
-  #frame { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 0 0; background: #fff; }
-  #frame iframe { width: 1920px; height: 1080px; border: 0; display: block; }
-  #bar {
-    display: flex; align-items: center; gap: var(--s-gap); padding: 0 var(--s-gap);
-    background: var(--c-surface); border-top: 1px solid var(--c-border);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  #bar .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c-muted); }
-  #bar .count { font-family: var(--f-mono); font-size: var(--s-caption); color: var(--c-muted); min-width: 5ch; text-align: center; }
-  button {
-    font: inherit; color: var(--c-text); background: transparent; border: 1px solid var(--c-border);
-    border-radius: var(--s-radius); padding: 4px 10px; cursor: pointer; min-height: 30px;
-  }
-  button:hover { border-color: var(--c-accent); }
-  button[aria-pressed="true"] { background: var(--c-accent); color: var(--c-accent-ink); border-color: var(--c-accent); }
-  button:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
-  #notes {
-    position: absolute; left: 0; right: 0; bottom: 0; max-height: 40%; overflow: auto; white-space: pre-wrap;
-    background: color-mix(in srgb, var(--c-surface) 94%, transparent); border-top: 1px solid var(--c-border);
-    padding: var(--s-gap) calc(var(--s-gap) * 2); font-size: calc(var(--s-ui) * 1.15);
-  }
-  #notes[hidden], #grid[hidden], #msg[hidden] { display: none; }
-  #grid {
-    position: absolute; inset: 0; overflow: auto; background: var(--c-stage); padding: calc(var(--s-gap) * 1.5);
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-gap); align-content: start;
-  }
-  .thumb { position: relative; aspect-ratio: 16 / 9; border: 1px solid var(--c-border); border-radius: var(--s-radius); overflow: hidden; cursor: pointer; background: #fff; padding: 0; }
-  .thumb[aria-current="true"] { outline: 2px solid var(--c-accent); }
-  .thumb iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; pointer-events: none; }
-  .thumb span { position: absolute; left: 6px; bottom: 6px; background: var(--c-surface); color: var(--c-text); font: var(--s-caption) var(--f-mono); padding: 1px 6px; border-radius: 4px; }
-  #msg { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; color: var(--c-muted); }
+  html, body { height: 100%; margin: 0; background: var(--c-stage); }
+  .reveal-viewport { background: var(--c-stage); }
+  .reveal .controls, .reveal .progress { color: var(--c-accent); }
+  .reveal .slide-number { background: transparent; color: var(--c-muted); font: var(--s-caption) var(--f-mono); }
+  body { font: var(--s-ui) / 1.4 var(--f-ui); color: var(--c-text); }
+  #msg { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; color: var(--c-muted); }
+  #msg[hidden] { display: none; }
   #msg code { font-family: var(--f-mono); color: var(--c-text); }
+
+  /* Folien: reveal.js darf die Hülle steuern, der Inhalt folgt dem Folienformat. */
+  .reveal .slides > section { padding: 0 !important; text-align: left; }
+  .reveal .slides .slide {
+    position: relative; width: 1920px; height: 1080px; overflow: hidden; box-sizing: border-box;
+    background: #fff; color: #000; font-size: 16px; font-weight: 400; line-height: normal;
+    text-transform: none; letter-spacing: normal; text-shadow: none;
+  }
+  .reveal .slides .slide { text-align: left; }
+  @media print { .reveal .slide-number, .reveal .slide-number-pdf { display: none !important; } }
+  .reveal .slides .slide *, .reveal .slides .slide *::before, .reveal .slides .slide *::after { box-sizing: border-box; }
+  .reveal .slides .slide, .reveal .slides .slide div { display: flex; flex-direction: column; }
+  .reveal .slides .slide h1, .reveal .slides .slide h2, .reveal .slides .slide h3,
+  .reveal .slides .slide p, .reveal .slides .slide ul, .reveal .slides .slide ol {
+    margin: 0; text-transform: none; letter-spacing: normal; text-shadow: none; text-align: inherit; max-width: none;
+  }
+  .reveal .slides .slide h1 { font-size: 96px; font-weight: 600; line-height: 1.1; }
+  .reveal .slides .slide h2 { font-size: 64px; font-weight: 600; line-height: 1.15; }
+  .reveal .slides .slide h3 { font-size: 44px; font-weight: 600; line-height: 1.2; }
+  .reveal .slides .slide p { font-size: 32px; line-height: 1.4; }
+  .reveal .slides .slide ul, .reveal .slides .slide ol { display: block; padding-left: 1.1em; font-size: 32px; line-height: 1.4; }
+  .reveal .slides .slide li { display: list-item; margin: 0; }
+  .reveal .slides .slide table { border-collapse: collapse; font-size: 32px; margin: 0; }
+  .reveal .slides .slide th, .reveal .slides .slide td { border: 1px solid rgba(128,128,128,.45); padding: .35em .6em; text-align: left; }
+  .reveal .slides .slide th { font-weight: 600; }
+  .reveal .slides .slide hr { border: 0; border-top: 2px solid currentColor; width: 100%; margin: 0; height: 0; }
+  .reveal .slides .slide img, .reveal .slides .slide video, .reveal .slides .slide iframe, .reveal .slides .slide svg {
+    max-width: none; max-height: none; margin: 0; border: 0; box-shadow: none; background: transparent;
+  }
+  .reveal .slides .slide img { display: block; }
 </style>
 </head>
 <body>
-<div id="stage">
-  <div id="frame"></div>
-  <div id="notes" hidden></div>
-  <div id="grid" hidden></div>
-  <div id="msg" hidden></div>
-</div>
-<div id="bar">
-  <button id="prev" aria-label="Vorherige Folie">&larr;</button>
-  <span class="count" id="count">0 / 0</span>
-  <button id="next" aria-label="Nächste Folie">&rarr;</button>
-  <span class="title" id="title"></span>
-  <button id="bnotes" aria-pressed="false" title="Notizen (N)">Notizen</button>
-  <button id="bgrid" aria-pressed="false" title="Übersicht (G)">Übersicht</button>
-  <button id="bfull" title="Vollbild (F)">Vollbild</button>
-</div>
+<div class="reveal"><div class="slides" id="slides"></div></div>
+<div id="msg" hidden></div>
 <!--INJECT-->
 <script src="slide-convert.js"></script>
+<script src="vendor/reveal/reveal.js"></script>
+<script src="vendor/reveal/notes.js"></script>
 <script>
 "use strict";
-const W = 1920, H = 1080;
+const state = { deck: null, slides: {}, order: [] };
 const $ = (id) => document.getElementById(id);
-const state = { deck: null, slides: {}, order: [], i: 0, notes: {}, docs: {} };
-
-// ---------- Folie -> sicheres Dokument ----------
-function buildDoc(html, key) {
-  const p = prepareSlide(html, key);
-  if (!p.sec) return { html: '<p style="font:24px sans-serif;padding:48px">Keine &lt;section&gt; in dieser Folie.</p>', notes: '', embeds: false };
-  const { sec, notes, embeds } = p;
-  const head = fontHead(state.deck && state.deck.faces);
-  const css = `
-    *{box-sizing:border-box}
-    html,body{margin:0;width:${W}px;height:${H}px;overflow:hidden}
-    section,div{display:flex;flex-direction:column}
-    section{position:relative;width:${W}px;height:${H}px;overflow:hidden}
-    h1,h2,h3,p,ul,ol{margin:0}
-    h1{font-size:96px;font-weight:600;line-height:1.1}
-    h2{font-size:64px;font-weight:600;line-height:1.15}
-    h3{font-size:44px;font-weight:600;line-height:1.2}
-    p{font-size:32px;line-height:1.4}
-    ul,ol{padding-left:1.1em;font-size:32px;line-height:1.4}
-    table{border-collapse:collapse;font-size:32px}
-    th,td{border:1px solid rgba(128,128,128,.45);padding:.35em .6em;text-align:left}
-    th{font-weight:600}
-    hr{border:0;border-top:2px solid currentColor;width:100%}
-    img{display:block}
-    x-embed{display:none}`;
-  return { html: `<!doctype html><html><head><meta charset="utf-8">${head}<style>${css}</style></head><body>${sec.outerHTML}</body></html>`, notes, embeds };
-}
-
-function docFor(id) {
-  if (!state.docs[id]) state.docs[id] = buildDoc(state.slides[id], id);
-  return state.docs[id];
-}
-function makeFrame(id, interactive) {
-  const d = docFor(id);
-  const f = document.createElement('iframe');
-  f.setAttribute('sandbox', d.embeds ? 'allow-scripts' : '');
-  f.setAttribute('title', id);
-  f.srcdoc = d.html;
-  if (!interactive) f.setAttribute('loading', 'lazy');
-  return f;
-}
-
-// ---------- Anzeige ----------
-function fit() {
-  const s = $('stage').getBoundingClientRect();
-  const k = Math.min(s.width / W, s.height / H);
-  const fr = $('frame');
-  fr.style.transform = `translate(${-W * k / 2}px,${-H * k / 2}px) scale(${k})`;
-}
-function show(i) {
-  if (!state.order.length) return;
-  state.i = Math.max(0, Math.min(state.order.length - 1, i));
-  const id = state.order[state.i];
-  $('frame').replaceChildren(makeFrame(id, true));
-  $('count').textContent = `${state.i + 1} / ${state.order.length}`;
-  $('notes').textContent = docFor(id).notes || 'Keine Notizen zu dieser Folie.';
-  $('title').textContent = state.deck.title || '';
-  document.title = (state.deck.title || 'Slides') + ' (' + (state.i + 1) + '/' + state.order.length + ')';
-  history.replaceState(null, '', '#' + (state.i + 1));
-  [...$('grid').children].forEach((t, j) => t.setAttribute('aria-current', String(j === state.i)));
-}
-function toggle(panel, btn) {
-  const el = $(panel), on = el.hidden;
-  el.hidden = !on; $(btn).setAttribute('aria-pressed', String(on));
-}
-function buildGrid() {
-  const g = $('grid');
-  state.order.forEach((id, j) => {
-    const b = document.createElement('button');
-    b.className = 'thumb'; b.setAttribute('aria-label', 'Folie ' + (j + 1));
-    const f = makeFrame(id, false);
-    b.append(f);
-    const lab = document.createElement('span'); lab.textContent = String(j + 1); b.append(lab);
-    b.onclick = () => { show(j); toggle('grid', 'bgrid'); };
-    g.append(b);
-  });
-  const scaleThumbs = () => g.querySelectorAll('.thumb').forEach((t) => { t.firstChild.style.transform = `scale(${t.clientWidth / W})`; });
-  new ResizeObserver(scaleThumbs).observe(g);
-  g._scale = scaleThumbs;
-}
 function message(html) { const m = $('msg'); m.innerHTML = html; m.hidden = false; }
 
-window.addEventListener('resize', fit);
-document.addEventListener('keydown', (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const k = e.key;
-  if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(k)) { show(state.i + 1); e.preventDefault(); }
-  else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(k)) { show(state.i - 1); e.preventDefault(); }
-  else if (k === 'Home') show(0);
-  else if (k === 'End') show(state.order.length - 1);
-  else if (k === 'n' || k === 'N') toggle('notes', 'bnotes');
-  else if (k === 'g' || k === 'G') { toggle('grid', 'bgrid'); $('grid')._scale && $('grid')._scale(); }
-  else if (k === 'f' || k === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
-  else if (k === 'Escape' && !$('grid').hidden) toggle('grid', 'bgrid');
-});
-let tx = null;
-$('stage').addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
-$('stage').addEventListener('touchend', (e) => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(state.i + (dx < 0 ? 1 : -1)); tx = null; });
-$('prev').onclick = () => show(state.i - 1);
-$('next').onclick = () => show(state.i + 1);
-$('bnotes').onclick = () => toggle('notes', 'bnotes');
-$('bgrid').onclick = () => { toggle('grid', 'bgrid'); $('grid')._scale && $('grid')._scale(); };
-$('bfull').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+// data-transition und data-build-in der Vorlage auf reveal.js abbilden.
+const TRANSITION = { fade: 'fade', push: 'slide', magic: 'slide' };
+const BUILD = { fade: 'fade-in', rise: 'fade-up', drop: 'fade-down', left: 'fade-right', right: 'fade-left', scale: 'grow', pop: 'grow' };
+
+function slideSection(id) {
+  const p = prepareSlide(state.slides[id], id);
+  const wrap = document.createElement('section');
+  if (!p.sec) { wrap.textContent = 'Keine <section> in dieser Folie.'; return wrap; }
+  const sec = p.sec;
+  const tr = sec.getAttribute('data-transition');
+  if (tr && TRANSITION[tr]) wrap.setAttribute('data-transition', TRANSITION[tr]);
+  if (tr === 'magic') {
+    wrap.setAttribute('data-auto-animate', '');
+    sec.querySelectorAll('[id]').forEach((el) => { el.setAttribute('data-id', el.id); el.removeAttribute('id'); });
+  }
+  sec.querySelectorAll('[data-build-in]').forEach((el) => {
+    const [kind, order] = el.getAttribute('data-build-in').trim().split(/\s+/);
+    el.classList.add('fragment');
+    if (BUILD[kind] && BUILD[kind] !== 'fade-in') el.classList.add(BUILD[kind]);
+    if (/^\d+$/.test(order || '')) el.setAttribute('data-fragment-index', order);
+  });
+  const inner = document.createElement('div');
+  inner.className = 'slide';
+  inner.setAttribute('style', sec.getAttribute('style') || '');
+  inner.innerHTML = sec.innerHTML;
+  wrap.append(inner);
+  if (p.notes) { const a = document.createElement('aside'); a.className = 'notes'; a.textContent = p.notes; wrap.append(a); }
+  return wrap;
+}
 
 loadDeck(state).then(() => {
   if (!state.order.length) { message('Das Deck enthält keine Folien.'); return; }
-  buildGrid(); fit();
-  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
-  const q = new URLSearchParams(location.search);
-  if (q.get('shownotes') === '1') toggle('notes', 'bnotes');
-  if (q.get('grid') === '1') { toggle('grid', 'bgrid'); $('grid')._scale(); }
+  const head = fontHead(state.deck.faces);
+  if (head) document.head.insertAdjacentHTML('beforeend', head);
+  document.title = state.deck.title || 'Slides';
+  const root = $('slides');
+  state.order.forEach((id) => root.append(slideSection(id)));
+  const deck = new Reveal(document.querySelector('.reveal'), {
+    width: 1920, height: 1080, margin: 0, minScale: 0.05, maxScale: 3, center: false,
+    hash: true, controls: true, progress: true, slideNumber: 'c/t', transition: 'none',
+    pdfSeparateFragments: false, pdfMaxPagesPerSlide: 1,
+    plugins: [RevealNotes]
+  });
+  const setNotes = (on) => { deck.configure({ showNotes: on }); requestAnimationFrame(() => deck.layout()); };
+  deck.initialize().then(() => {
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'g' || e.key === 'G') deck.toggleOverview();
+      else if (e.key === 'n' || e.key === 'N') setNotes(!deck.getConfig().showNotes);
+    });
+    const q = new URLSearchParams(location.search);
+    if (q.get('shownotes') === '1') setNotes(true);
+    if (q.get('grid') === '1') deck.toggleOverview(true);
+  });
 }).catch((err) => {
   message(`Laden fehlgeschlagen: <code></code><br>Per <code>file://</code> klappt <code>fetch</code> nicht. Entweder einen lokalen Server starten oder mit <code>build_standalone.py</code> eine Einzeldatei bauen.`);
   $('msg').querySelector('code').textContent = err.message;

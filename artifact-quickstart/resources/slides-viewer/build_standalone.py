@@ -2,7 +2,7 @@
 """Packt ein Deck (project/deck.json + project/slides/*.html) und den Viewer
 in eine einzelne HTML-Datei, die sich auch per file:// öffnen lässt.
 
-    python3 build_standalone.py <deck-ordner> <ausgabe.html> [--engine own|reveal] [--tokens tokens.json]
+    python3 build_standalone.py <deck-ordner> <ausgabe.html> [--tokens tokens.json]
 
 <deck-ordner> ist der Ordner, der `project/` enthält. Lokale Bilder und
 Schriften unter project/ werden als data:-URI eingebettet. Verweise der Form
@@ -51,7 +51,6 @@ def main() -> int:
     ap.add_argument("deck_root", type=Path)
     ap.add_argument("out", type=Path)
     ap.add_argument("--tokens", type=Path, default=HERE / "tokens.json")
-    ap.add_argument("--engine", choices=["own", "reveal"], default="reveal")
     a = ap.parse_args()
 
     proj = a.deck_root / "project"
@@ -66,10 +65,8 @@ def main() -> int:
         slides[sid] = inline(f.read_text(encoding="utf-8"), a.deck_root)
     tokens = json.loads(a.tokens.read_text(encoding="utf-8"))
 
-    tpl = (HERE / ("viewer.html" if a.engine == "own" else "viewer-reveal.html")).read_text(encoding="utf-8")
-    tpl = embed(tpl)
-    if a.engine == "reveal":
-        tpl = tpl.replace("connect-src 'self'", "connect-src 'none'")
+    tpl = embed((HERE / "viewer.html").read_text(encoding="utf-8"))
+    tpl = tpl.replace("connect-src 'self'", "connect-src 'none'")
     payload = f"<script>window.__DECK__={js({'deck': deck, 'slides': slides})};window.__TOKENS__={js(tokens)};</script>"
     if "<!--INJECT-->" not in tpl:
         sys.exit("Platzhalter <!--INJECT--> fehlt im Viewer.")
